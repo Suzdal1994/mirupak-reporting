@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ежемесячная отчётность — Мир Упаковки</title>
+<style>
+  :root {
+    --accent: #E8440A;
+    --accent-hover: #c93a08;
+    --bg: #f4f5f7;
+    --card-bg: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --border: #e0e0e0;
+    --success: #27AE60;
+    --warning: #f39c12;
+    --error: #e74c3c;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: #fff;
+    border-bottom: 3px solid var(--accent);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+  }
+  .logo span { color: var(--accent); }
+  header .badge {
+    background: #fff3ef;
+    color: var(--accent);
+    border: 1px solid #fcd3c4;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* MAIN */
+  main {
+    max-width: 860px;
+    margin: 40px auto;
+    padding: 0 24px 80px;
+  }
+
+  .page-title {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .page-title h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .page-title p {
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .num {
+    width: 26px;
+    height: 26px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  /* FORM ELEMENTS */
+  .form-group { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fafafa;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--accent);
+    background: white;
+  }
+  .input-hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+  }
+
+  /* FILE DROP */
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafafa;
+  }
+  .file-drop:hover, .file-drop.dragover {
+    border-color: var(--accent);
+    background: #fff3ef;
+  }
+  .file-drop .drop-icon {
+    font-size: 36px;
+    margin-bottom: 10px;
+  }
+  .file-drop .drop-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .file-drop .drop-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .file-drop input { display: none; }
+  .file-selected {
+    background: #f0faf4;
+    border-color: var(--success);
+  }
+  .file-selected .drop-text { color: var(--success); }
+
+  /* GAMMA TOGGLE */
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  input:checked + .toggle-slider { background: var(--accent); }
+  input:checked + .toggle-slider:before { transform: translateX(20px); }
+  .toggle-label { font-size: 14px; font-weight: 600; }
+
+  /* GAMMA SECTION */
+  #gamma-section {
+    display: none;
+    margin-top: 4px;
+  }
+  #gamma-section.visible { display: block; }
+
+  .api-key-row {
+    display: flex;
+    gap: 10px;
+  }
+  .api-key-row input { flex: 1; }
+  .btn-validate {
+    padding: 10px 16px;
+    background: #f5f5f5;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-validate:hover { background: #eee; }
+  .btn-validate.valid { background: #f0faf4; border-color: var(--success); color: var(--success); }
+  .btn-validate.invalid { background: #fef0f0; border-color: var(--error); color: var(--error); }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 14px;
+    background: #fafafa;
+    outline: none;
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: var(--accent); background: white; }
+
+  /* SUBMIT */
+  .btn-submit {
+    width: 100%;
+    padding: 15px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .btn-submit:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+  /* PROGRESS SECTION */
+  #progress-section { display: none; }
+
+  .progress-bar-wrap {
+    background: #f0f0f0;
+    border-radius: 8px;
+    height: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 8px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  .status-msg {
+    font-size: 14px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  /* RESULTS */
+  #results-section { display: none; }
+
+  .results-header {
+    text-align: center;
+    padding: 16px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .results-header .success-icon {
+    font-size: 44px;
+    margin-bottom: 8px;
+  }
+  .results-header h2 { font-size: 22px; margin-bottom: 4px; }
+  .results-header p { color: var(--text-muted); font-size: 14px; }
+
+  .presentations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .pres-card {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+  .pres-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: #ccc; }
+  .pres-card.summary {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, #fff, #fff8f5);
+    grid-column: 1 / -1;
+  }
+
+  .pres-card .pres-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .pres-card .pres-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .pres-card .pres-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    flex: 1;
+  }
+
+  .pres-actions { display: flex; gap: 8px; }
+  .btn-open {
+    flex: 1;
+    padding: 8px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: background 0.2s;
+  }
+  .btn-open:hover { background: var(--accent-hover); }
+  .btn-dl {
+    padding: 8px 10px;
+    background: #f5f5f5;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+  .btn-dl:hover { background: #eee; }
+
+  .pres-card.error {
+    border-color: #ffd5d5;
+    background: #fffafa;
+  }
+  .pres-card.error .pres-title { color: var(--error); }
+
+  .btn-download-all {
+    width: 100%;
+    padding: 13px;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+    margin-bottom: 12px;
+  }
+  .btn-download-all:hover { background: #333; }
+
+  .btn-restart {
+    width: 100%;
+    padding: 11px;
+    background: white;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-restart:hover { background: #f5f5f5; }
+
+  /* ERROR */
+  .error-box {
+    background: #fef0f0;
+    border: 1.5px solid #fcd5d5;
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--error);
+    line-height: 1.5;
+  }
+
+  /* INSTRUCTION */
+  .instruction {
+    background: linear-gradient(135deg, #fff8f5, #fff);
+    border: 1px solid #fcd3c4;
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .instruction h3 {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .steps { display: flex; gap: 16px; flex-wrap: wrap; }
+  .step {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .step-num {
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .step-text strong { color: var(--text); }
+
+  /* SPINNER */
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2.5px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  .spinner.dark {
+    border-color: rgba(0,0,0,0.15);
+    border-top-color: var(--text-muted);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    main { padding: 0 16px 60px; margin-top: 24px; }
+    .row-2 { grid-template-columns: 1fr; }
+    .presentations-grid { grid-template-columns: 1fr; }
+    .pres-card.summary { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <span>Мир</span>Упаковки
+  </div>
+  <span class="badge">Ежемесячная отчётность</span>
+</header>
+
+<main>
+
+  <div class="page-title">
+    <h1>Автоматизация ежемесячных отчётов</h1>
+    <p>Загрузите файл с данными — система сформирует аналитику по каждому филиалу и создаст презентации в Gamma</p>
+  </div>
+
+  <div class="instruction">
+    <h3>Как это работает</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Загрузите</strong> Excel-файл с данными из Google Drive</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Система анализирует</strong> данные: мостик выручки, ТОП клиенты, сегменты</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Создаёт 10 презентаций</strong> в Gamma: 9 по филиалам + сводная</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong>Получите ссылки</strong> на готовые презентации</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ФОРМА -->
+  <div id="form-section">
+
+    <!-- Шаг 1: Файл -->
+    <div class="card">
+      <div class="card-title">
+        <div class="num">1</div>
+        Файл с данными
+      </div>
+
+      <div class="file-drop" id="file-drop" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFileSelect(this)">
+        <div class="drop-icon">📊</div>
+        <div class="drop-text">Нажмите для выбора или перетащите файл</div>
+        <div class="drop-sub">Формат: .xlsx или .xls • Таблица с данными: Период × Филиал × Клиент × Сегмент</div>
+      </div>
+    </div>
+
+    <!-- Шаг 2: Gamma API -->
+    <div class="card">
+      <div class="card-title">
+        <div class="num">2</div>
+        Интеграция с Gamma (необязательно)
+      </div>
+
+      <div class="toggle-group">
+        <label class="toggle">
+          <input type="checkbox" id="gamma-toggle" onchange="toggleGamma()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Автоматически создавать презентации в Gamma</span>
+      </div>
+      <div class="input-hint" style="margin-top:-6px; margin-bottom:12px;">Без Gamma вы получите Markdown-файлы, которые можно вставить в Gamma вручную</div>
+
+      <div id="gamma-section">
+        <div class="form-group">
+          <label>Gamma API Key</label>
+          <div class="api-key-row">
+            <input type="password" id="gamma-api-key" placeholder="sk-gamma-xxxxxxxxxxxxxx">
+            <button class="btn-validate" id="validate-btn" onclick="validateGammaKey()">Проверить</button>
+          </div>
+          <div class="input-hint">
+            Ключ: <a href="https://gamma.app/settings" target="_blank" style="color:var(--accent)">gamma.app/settings</a> → API Key
+          </div>
+        </div>
+
+        <div class="row-2" id="gamma-selects" style="display:none;">
+          <div class="form-group">
+            <label>Тема оформления</label>
+            <select id="theme-select">
+              <option value="">По умолчанию воркспейса</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Папка в Gamma</label>
+            <select id="folder-select">
+              <option value="">Без папки</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Запуск -->
+    <button class="btn-submit" id="submit-btn" onclick="startAnalysis()" disabled>
+      <span>Запустить анализ</span>
+    </button>
+
+  </div>
+
+  <!-- ПРОГРЕСС -->
+  <div id="progress-section">
+    <div class="card">
+      <div class="card-title">
+        <div class="spinner dark"></div>
+        Выполняется анализ
+      </div>
+      <div class="status-msg" id="status-msg">Запускаем...</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- РЕЗУЛЬТАТЫ -->
+  <div id="results-section">
+    <div class="card">
+      <div class="results-header">
+        <div class="success-icon">✅</div>
+        <h2 id="results-title">Анализ завершён</h2>
+        <p id="results-subtitle">Все презентации готовы</p>
+      </div>
+
+      <div id="presentations-grid" class="presentations-grid"></div>
+
+      <button class="btn-download-all" onclick="downloadAll()" id="btn-download-all">
+        ⬇ Скачать все Markdown-файлы (ZIP)
+      </button>
+      <button class="btn-restart" onclick="restart()">
+        ↺ Запустить новый анализ
+      </button>
+    </div>
+  </div>
+
+  <!-- ОШИБКА -->
+  <div id="error-section" style="display:none;">
+    <div class="card">
+      <div class="card-title" style="color:var(--error)">⚠ Ошибка</div>
+      <div class="error-box" id="error-msg"></div>
+      <button class="btn-restart" onclick="restart()" style="margin-top:16px;">↺ Попробовать снова</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let currentJobId = null;
+let pollInterval = null;
+let selectedFile = null;
+let gammaEnabled = false;
+
+// ---- FILE HANDLING ----
+const fileDrop = document.getElementById('file-drop');
+
+fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('dragover'); });
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
+fileDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  fileDrop.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFileSelect(file);
+});
+
+function handleFileSelect(input) {
+  if (input.files[0]) processFileSelect(input.files[0]);
+}
+
+function processFileSelect(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) {
+    alert('Поддерживаются только файлы .xlsx и .xls');
+    return;
+  }
+  selectedFile = file;
+  fileDrop.classList.add('file-selected');
+  fileDrop.querySelector('.drop-icon').textContent = '✅';
+  fileDrop.querySelector('.drop-text').textContent = file.name;
+  fileDrop.querySelector('.drop-sub').textContent = `${(file.size/1024).toFixed(0)} КБ`;
+  updateSubmitBtn();
+}
+
+// ---- GAMMA TOGGLE ----
+function toggleGamma() {
+  gammaEnabled = document.getElementById('gamma-toggle').checked;
+  const sec = document.getElementById('gamma-section');
+  if (gammaEnabled) sec.classList.add('visible');
+  else sec.classList.remove('visible');
+}
+
+async function validateGammaKey() {
+  const key = document.getElementById('gamma-api-key').value.trim();
+  if (!key) { alert('Введите API-ключ'); return; }
+
+  const btn = document.getElementById('validate-btn');
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/validate-gamma', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({api_key: key})
+    });
+    const data = await resp.json();
+
+    if (data.valid) {
+      btn.textContent = '✓ Ключ верен';
+      btn.className = 'btn-validate valid';
+
+      // Заполняем темы и папки
+      const themeSelect = document.getElementById('theme-select');
+      const folderSelect = document.getElementById('folder-select');
+      themeSelect.innerHTML = '<option value="">По умолчанию воркспейса</option>';
+      folderSelect.innerHTML = '<option value="">Без папки</option>';
+
+      if (data.themes && data.themes.length > 0) {
+        data.themes.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id || t.themeId || '';
+          opt.textContent = t.name || t.title || opt.value;
+          themeSelect.appendChild(opt);
+        });
+      }
+      if (data.folders && data.folders.length > 0) {
+        data.folders.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.id || f.folderId || '';
+          opt.textContent = f.name || f.title || opt.value;
+          folderSelect.appendChild(opt);
+        });
+      }
+
+      document.getElementById('gamma-selects').style.display = 'grid';
+    } else {
+      btn.textContent = '✗ Неверный ключ';
+      btn.className = 'btn-validate invalid';
+      alert('Ошибка: ' + (data.error || 'Ключ не валиден'));
+    }
+  } catch(e) {
+    btn.textContent = 'Ошибка';
+    btn.className = 'btn-validate invalid';
+  } finally {
+    btn.disabled = false;
+  }
+  updateSubmitBtn();
+}
+
+function updateSubmitBtn() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = !selectedFile;
+}
+
+// ---- START ANALYSIS ----
+async function startAnalysis() {
+  if (!selectedFile) return;
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  if (gammaEnabled) {
+    const key = document.getElementById('gamma-api-key').value.trim();
+    const theme = document.getElementById('theme-select').value;
+    const folder = document.getElementById('folder-select').value;
+    formData.append('gamma_api_key', key);
+    if (theme) formData.append('theme_id', theme);
+    if (folder) formData.append('folder_id', folder);
+  }
+
+  // UI
+  document.getElementById('form-section').style.display = 'none';
+  document.getElementById('progress-section').style.display = 'block';
+  document.getElementById('error-section').style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/start', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    currentJobId = data.job_id;
+    startPolling();
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+// ---- POLLING ----
+function startPolling() {
+  pollInterval = setInterval(pollStatus, 2000);
+}
+
+async function pollStatus() {
+  if (!currentJobId) return;
+  try {
+    const resp = await fetch(`/api/status/${currentJobId}`);
+    const data = await resp.json();
+    if (data.error) { clearInterval(pollInterval); showError(data.error); return; }
+
+    updateProgress(data);
+
+    if (data.status === 'completed') {
+      clearInterval(pollInterval);
+      showResults(data);
+    } else if (data.status === 'error') {
+      clearInterval(pollInterval);
+      showError(data.message || data.error || 'Неизвестная ошибка');
+    }
+  } catch(e) {
+    console.error('Poll error:', e);
+  }
+}
+
+function updateProgress(data) {
+  document.getElementById('status-msg').textContent = data.message || '...';
+  document.getElementById('progress-bar').style.width = (data.progress || 0) + '%';
+}
+
+// ---- RESULTS ----
+function showResults(data) {
+  document.getElementById('progress-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'block';
+
+  const period = data.period_name || '';
+  const gammaCount = Object.keys(data.gamma_results || {}).length;
+  const mdCount = Object.keys(data.markdowns || {}).length;
+
+  document.getElementById('results-title').textContent = `Анализ за ${period} завершён`;
+  if (gammaCount > 0) {
+    document.getElementById('results-subtitle').textContent = `Создано ${gammaCount} презентаций в Gamma`;
+  } else {
+    document.getElementById('results-subtitle').textContent = `Подготовлено ${mdCount} Markdown-файлов`;
+  }
+
+  const grid = document.getElementById('presentations-grid');
+  grid.innerHTML = '';
+
+  // Строим карточки
+  const allFiles = Object.keys(data.markdowns || {});
+
+  // Сводная — первой
+  const summary = allFiles.find(f => f.includes('СВОДНАЯ'));
+  const branches = allFiles.filter(f => !f.includes('СВОДНАЯ')).sort();
+
+  const ordered = summary ? [summary, ...branches] : branches;
+  const fact = data.fact_period || '';
+
+  ordered.forEach(filename => {
+    const isSummary = filename.includes('СВОДНАЯ');
+    const branchName = filename.replace(`Аналитика_продаж_${fact}_`, '').replace('.md', '');
+    const gammaInfo = (data.gamma_results || {})[filename];
+    const errorInfo = (data.gamma_errors || {})[filename];
+
+    const card = document.createElement('div');
+    card.className = 'pres-card' + (isSummary ? ' summary' : '') + (errorInfo && !gammaInfo ? ' error' : '');
+
+    let actionsHtml = '';
+    if (gammaInfo && gammaInfo.url) {
+      actionsHtml = `
+        <a class="btn-open" href="${gammaInfo.url}" target="_blank">
+          ↗ Открыть в Gamma
+        </a>
+        <a class="btn-dl" href="/api/download/${currentJobId}/${encodeURIComponent(filename)}" download title="Скачать Markdown">⬇</a>
+      `;
+    } else if (errorInfo) {
+      actionsHtml = `
+        <a class="btn-dl" href="/api/download/${currentJobId}/${encodeURIComponent(filename)}" download style="flex:1;justify-content:center;">
+          ⬇ Скачать Markdown
+        </a>
+      `;
+    } else {
+      actionsHtml = `
+        <a class="btn-dl" href="/api/download/${currentJobId}/${encodeURIComponent(filename)}" download style="flex:1;justify-content:center;">
+          ⬇ Скачать Markdown
+        </a>
+      `;
+    }
+
+    let statusMeta = '';
+    if (gammaInfo) statusMeta = '<span style="color:var(--success);font-weight:600;">✓ Создано в Gamma</span>';
+    else if (errorInfo) statusMeta = `<span style="color:var(--error);">⚠ Ошибка Gamma: ${errorInfo.substring(0, 60)}</span>`;
+    else statusMeta = 'Markdown готов';
+
+    card.innerHTML = `
+      <div class="pres-icon">${isSummary ? '🏢' : '📍'}</div>
+      <div class="pres-title">${isSummary ? 'Сводная по холдингу' : branchName}</div>
+      <div class="pres-meta">${statusMeta}</div>
+      <div class="pres-actions">${actionsHtml}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function showError(msg) {
+  document.getElementById('progress-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('form-section').style.display = 'block';
+  document.getElementById('error-section').style.display = 'block';
+  document.getElementById('error-msg').textContent = msg;
+}
+
+function downloadAll() {
+  if (!currentJobId) return;
+  window.location.href = `/api/download-all/${currentJobId}`;
+}
+
+function restart() {
+  if (pollInterval) clearInterval(pollInterval);
+  currentJobId = null;
+  selectedFile = null;
+  gammaEnabled = false;
+
+  document.getElementById('file-drop').classList.remove('file-selected');
+  document.getElementById('file-drop').querySelector('.drop-icon').textContent = '📊';
+  document.getElementById('file-drop').querySelector('.drop-text').textContent = 'Нажмите для выбора или перетащите файл';
+  document.getElementById('file-drop').querySelector('.drop-sub').textContent = 'Формат: .xlsx или .xls • Таблица с данными: Период × Филиал × Клиент × Сегмент';
+  document.getElementById('file-input').value = '';
+  document.getElementById('gamma-toggle').checked = false;
+  document.getElementById('gamma-section').classList.remove('visible');
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('validate-btn').textContent = 'Проверить';
+  document.getElementById('validate-btn').className = 'btn-validate';
+  document.getElementById('gamma-selects').style.display = 'none';
+  document.getElementById('gamma-api-key').value = '';
+
+  document.getElementById('form-section').style.display = 'block';
+  document.getElementById('progress-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('error-section').style.display = 'none';
+}
+</script>
+</body>
+</html>

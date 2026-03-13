@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+uploads/
+*.xlsx
+*.xls
+.env
+*.zip
