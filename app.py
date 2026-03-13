@@ -1,5 +1,6 @@
 """
 Flask-приложение — Инструмент ежемесячной отчётности «Мир Упаковки»
+Хранилище задач: /tmp/jobs/<job_id>.json (работает с несколькими воркерами gunicorn)
 """
 
 import os
@@ -16,25 +17,50 @@ from gamma_client import GammaClient
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get('SECRET_KEY', 'mirupak-secret-2026')
 
-# Создаём папку uploads при старте (Railway использует /tmp для записи)
+JOBS_DIR = '/tmp/jobs'
+
+# Создаём рабочие папки при старте
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# Хранилище задач в памяти (job_id → status/results)
-jobs = {}
-jobs_lock = threading.Lock()
+os.makedirs(JOBS_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def job_path(job_id):
+    return os.path.join(JOBS_DIR, f"{job_id}.json")
+
+
+def read_job(job_id):
+    """Читает задачу из файла. Возвращает None если не найдена."""
+    path = job_path(job_id)
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def write_job(job_id, data):
+    """Записывает задачу в файл атомарно."""
+    path = job_path(job_id)
+    tmp_path = path + '.tmp'
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp_path, path)
+
+
 def update_job(job_id, **kwargs):
-    with jobs_lock:
-        if job_id in jobs:
-            jobs[job_id].update(kwargs)
+    """Обновляет поля задачи."""
+    job = read_job(job_id)
+    if job is not None:
+        job.update(kwargs)
+        write_job(job_id, job)
 
 
 def process_job(job_id: str, filepath: str, gamma_api_key: str, theme_id: str, folder_id: str, gdrive_url: str):
@@ -42,13 +68,13 @@ def process_job(job_id: str, filepath: str, gamma_api_key: str, theme_id: str, f
     try:
         # Шаг 1: Анализ данных
         update_job(job_id, status='analyzing', progress=5, message='Загружаем и анализируем данные...')
-        
+
         result = run_analysis(filepath)
         branches = result['branches']
         files = result['files']
         fact_period = result['fact_period']
         period_name = result['period_name']
-        
+
         update_job(job_id,
                    progress=20,
                    message=f'Анализ завершён. Найдено {len(branches)} филиалов. Создаём презентации...',
@@ -56,39 +82,38 @@ def process_job(job_id: str, filepath: str, gamma_api_key: str, theme_id: str, f
                    fact_period=fact_period,
                    period_name=period_name,
                    markdowns=files)
-        
+
         # Шаг 2: Создание презентаций в Gamma
         gamma_results = {}
         gamma_errors = {}
-        
+
         if gamma_api_key:
             client = GammaClient(gamma_api_key)
-            
+
             total_files = len(files)
             done = 0
-            
+
             for filename, markdown in files.items():
                 try:
                     update_job(job_id,
                                status='creating_presentations',
                                message=f'Создаём в Gamma: {filename} ({done+1}/{total_files})',
                                progress=20 + int(70 * done / total_files))
-                    
-                    # Определяем название
+
                     is_summary = 'СВОДНАЯ' in filename
                     branch_name = filename.replace(f'Аналитика_продаж_{fact_period}_', '').replace('.md', '')
                     title = f"Сводная аналитика {period_name}" if is_summary else f"Аналитика {period_name} — {branch_name}"
-                    
-                    kwargs = {}
+
+                    kw = {}
                     if theme_id:
-                        kwargs['theme_id'] = theme_id
+                        kw['theme_id'] = theme_id
                     if folder_id:
-                        kwargs['folder_id'] = folder_id
-                    
+                        kw['folder_id'] = folder_id
+
                     gamma_result = client.create_and_wait(
                         markdown_text=markdown,
                         title=title,
-                        **kwargs
+                        **kw
                     )
                     gamma_results[filename] = {
                         'url': gamma_result['url'],
@@ -96,12 +121,12 @@ def process_job(job_id: str, filepath: str, gamma_api_key: str, theme_id: str, f
                         'is_summary': is_summary,
                         'branch': branch_name
                     }
-                    
+
                 except Exception as e:
                     gamma_errors[filename] = str(e)
-                
+
                 done += 1
-        
+
         # Шаг 3: Завершение
         update_job(job_id,
                    status='completed',
@@ -109,16 +134,15 @@ def process_job(job_id: str, filepath: str, gamma_api_key: str, theme_id: str, f
                    message='Готово! Все презентации созданы.',
                    gamma_results=gamma_results,
                    gamma_errors=gamma_errors)
-    
+
     except Exception as e:
         update_job(job_id,
                    status='error',
                    progress=0,
                    message=f'Ошибка: {str(e)}',
                    error=str(e))
-    
+
     finally:
-        # Удаляем загруженный файл
         try:
             os.remove(filepath)
         except:
@@ -133,86 +157,78 @@ def index():
 @app.route('/api/start', methods=['POST'])
 def start_job():
     """Запускает задачу анализа."""
-    
-    # Файл
+
     if 'file' not in request.files:
         return jsonify({'error': 'Файл не загружен'}), 400
-    
+
     file = request.files['file']
     if not file or file.filename == '':
         return jsonify({'error': 'Файл не выбран'}), 400
-    
+
     if not allowed_file(file.filename):
         return jsonify({'error': 'Поддерживаются только файлы .xlsx и .xls'}), 400
-    
-    # Параметры
+
     gamma_api_key = request.form.get('gamma_api_key', '').strip()
     theme_id = request.form.get('theme_id', '').strip()
     folder_id = request.form.get('folder_id', '').strip()
     gdrive_url = request.form.get('gdrive_url', '').strip()
-    
-    # Сохраняем файл
+
     job_id = str(uuid.uuid4())
     filename = secure_filename(file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{job_id}_{filename}")
     file.save(filepath)
-    
-    # Создаём задачу
-    with jobs_lock:
-        jobs[job_id] = {
-            'status': 'starting',
-            'progress': 0,
-            'message': 'Запускаем анализ...',
-            'branches': [],
-            'markdowns': {},
-            'gamma_results': {},
-            'gamma_errors': {},
-            'fact_period': '',
-            'period_name': '',
-            'has_gamma': bool(gamma_api_key)
-        }
-    
-    # Запускаем в фоновом потоке
+
+    # Создаём задачу в файловой системе
+    write_job(job_id, {
+        'status': 'starting',
+        'progress': 0,
+        'message': 'Запускаем анализ...',
+        'branches': [],
+        'markdowns': {},
+        'gamma_results': {},
+        'gamma_errors': {},
+        'fact_period': '',
+        'period_name': '',
+        'has_gamma': bool(gamma_api_key)
+    })
+
     thread = threading.Thread(
         target=process_job,
         args=(job_id, filepath, gamma_api_key, theme_id, folder_id, gdrive_url),
         daemon=True
     )
     thread.start()
-    
+
     return jsonify({'job_id': job_id})
 
 
 @app.route('/api/status/<job_id>')
 def job_status(job_id):
-    with jobs_lock:
-        job = jobs.get(job_id)
-    
+    job = read_job(job_id)
+
     if not job:
         return jsonify({'error': 'Задача не найдена'}), 404
-    
-    # Не возвращаем сами markdown в статусе (слишком большие)
+
+    # Не возвращаем markdowns в статусе (слишком большие)
     response = {k: v for k, v in job.items() if k != 'markdowns'}
     return jsonify(response)
 
 
 @app.route('/api/download/<job_id>/<filename>')
 def download_markdown(job_id, filename):
-    with jobs_lock:
-        job = jobs.get(job_id)
-    
+    job = read_job(job_id)
+
     if not job or 'markdowns' not in job:
         return jsonify({'error': 'Файл не найден'}), 404
-    
+
     content = job['markdowns'].get(filename)
     if not content:
         return jsonify({'error': 'Файл не найден'}), 404
-    
-    # Создаём временный файл
+
     tmp_path = f"/tmp/{filename}"
     with open(tmp_path, 'w', encoding='utf-8') as f:
         f.write(content)
-    
+
     return send_file(tmp_path, as_attachment=True, download_name=filename,
                      mimetype='text/markdown')
 
@@ -222,21 +238,20 @@ def download_all(job_id):
     """Скачать все Markdown-файлы в ZIP."""
     import zipfile
     import io
-    
-    with jobs_lock:
-        job = jobs.get(job_id)
-    
+
+    job = read_job(job_id)
+
     if not job or 'markdowns' not in job:
         return jsonify({'error': 'Задача не найдена'}), 404
-    
+
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for filename, content in job['markdowns'].items():
-            zf.writestr(filename, content.encode('utf-8'))
-    
+        for fname, content in job['markdowns'].items():
+            zf.writestr(fname, content.encode('utf-8'))
+
     zip_buffer.seek(0)
     period = job.get('fact_period', 'report')
-    
+
     return send_file(
         zip_buffer,
         as_attachment=True,
@@ -250,10 +265,10 @@ def validate_gamma():
     """Проверяет API-ключ Gamma."""
     data = request.get_json()
     api_key = data.get('api_key', '').strip()
-    
+
     if not api_key:
         return jsonify({'valid': False, 'error': 'Ключ не указан'})
-    
+
     try:
         client = GammaClient(api_key)
         themes = client.get_themes()
@@ -268,6 +283,5 @@ def validate_gamma():
 
 
 if __name__ == '__main__':
-    os.makedirs('uploads', exist_ok=True)
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
