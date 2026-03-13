@@ -15,8 +15,11 @@ from gamma_client import GammaClient
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 app.secret_key = os.urandom(24)
+
+# Создаём папку uploads при старте (Railway использует /tmp для записи)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Хранилище задач в памяти (job_id → status/results)
 jobs = {}
