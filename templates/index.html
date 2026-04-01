@@ -867,7 +867,7 @@ function showResults(data) {
 
   const period = data.period_name || '';
   const gammaCount = Object.keys(data.gamma_results || {}).length;
-  const mdCount = Object.keys(data.markdowns || {}).length;
+  const mdCount = data.markdown_count || Object.keys(data.markdowns || {}).length;
 
   document.getElementById('results-title').textContent = `Анализ за ${period} завершён`;
   if (gammaCount > 0) {
@@ -880,7 +880,7 @@ function showResults(data) {
   grid.innerHTML = '';
 
   // Строим карточки
-  const allFiles = Object.keys(data.markdowns || {});
+  const allFiles = data.markdown_files || Object.keys(data.markdowns || {});
 
   // Сводная — первой
   const summary = allFiles.find(f => f.includes('СВОДНАЯ'));
