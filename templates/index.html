@@ -750,19 +750,29 @@ async function validateGammaKey() {
       themeSelect.innerHTML = '<option value="">По умолчанию воркспейса</option>';
       folderSelect.innerHTML = '<option value="">Без папки</option>';
 
+      console.log('Gamma themes:', JSON.stringify(data.themes));
+      console.log('Gamma folders:', JSON.stringify(data.folders));
+
+      function getItemId(item) {
+        return item.id || item.themeId || item.folderId || item.theme_id || item.folder_id || '';
+      }
+      function getItemName(item) {
+        return item.name || item.title || item.label || getItemId(item);
+      }
+
       if (data.themes && data.themes.length > 0) {
         data.themes.forEach(t => {
           const opt = document.createElement('option');
-          opt.value = t.id || t.themeId || '';
-          opt.textContent = t.name || t.title || opt.value;
+          opt.value = getItemId(t);
+          opt.textContent = getItemName(t);
           themeSelect.appendChild(opt);
         });
       }
       if (data.folders && data.folders.length > 0) {
         data.folders.forEach(f => {
           const opt = document.createElement('option');
-          opt.value = f.id || f.folderId || '';
-          opt.textContent = f.name || f.title || opt.value;
+          opt.value = getItemId(f);
+          opt.textContent = getItemName(f);
           folderSelect.appendChild(opt);
         });
       }
