@@ -1,5 +1,7 @@
 """
 Клиент для Gamma API — создание презентаций из Markdown.
+textMode: "preserve" — сохраняет текст как есть
+additionalInstructions — передаём системный промпт
 """
 
 import requests
@@ -9,13 +11,14 @@ from typing import Optional
 
 GAMMA_API_BASE = "https://public-api.gamma.app/v1.0"
 
-GAMMA_SYSTEM_PROMPT = """ТЫ — ГЕНЕРАТОР ПРЕЗЕНТАЦИИ В GAMMA.
+# Инструкции передаются через additionalInstructions (max 5000 символов)
+GAMMA_ADDITIONAL_INSTRUCTIONS = """ТЫ — ГЕНЕРАТОР ПРЕЗЕНТАЦИИ В GAMMA.
 
 ИСТОЧНИК ИСТИНЫ: ТОЛЬКО МАРКДАУН, КОТОРЫЙ Я ДАЛ НИЖЕ.
 ЗАПРЕЩЕНО:
 - добавлять любые новые факты, цифры, выводы или примеры,
 - "дорисовывать" контекст, причины, интерпретации, которых нет в тексте,
-- создавать/вставлять картинки, иконки, иллюстрации, диаграммы, графики, схемы, карты, таймлайны, инфографику,
+- создавать/вставлять картинки, иконки, иллюстрации, диаграммы, графики, схемы,
 - заменять таблицы графиками,
 - использовать внешние источники.
 
@@ -25,25 +28,11 @@ GAMMA_SYSTEM_PROMPT = """ТЫ — ГЕНЕРАТОР ПРЕЗЕНТАЦИИ В G
 - сохранить структуру и порядок слайдов.
 
 ФОРМАТ ВЫХОДА:
-- Создай презентацию ровно по структуре ниже.
-- На слайде 1 нарисуй рисунок в серых цветах
-- Каждый раздел, отделенный '---', = один слайд.
+- Каждый раздел, отделённый '---', = один слайд.
 - Сохраняй таблицы как таблицы (не превращай в графики).
-- Ничего не добавляй от себя. Если где-то в таблицах пусто или стоят плейсхолдеры — оставь как есть.
-- Если видишь пустой столбец "Комментарии" или пустую таблицу "Плановые мероприятия" — оставь их пустыми для ручного заполнения.
+- Ничего не добавляй от себя. Пустые столбцы и таблицы — оставь пустыми.
 
-СТИЛЬ ОФОРМЛЕНИЯ:
-- Минималистично, деловой стиль.
-- Без изображений и декоративных элементов.
-- Не менять названия эффектов и метрик.
-
-ТВОЯ ЗАДАЧА:
-1) Прочитать "РЕЗУЛЬТАТ МАСТЕР-ПРОМПТА".
-2) Превратить его в презентацию в Gamma: один слайд = один блок между '---'.
-3) Ничего не придумывать и не улучшать содержательно.
-
-НИЖЕ ВСТАВЛЯЮ "РЕЗУЛЬТАТ МАСТЕР-ПРОМПТА" — ЕДИНСТВЕННЫЙ ИСТОЧНИК
-"""
+СТИЛЬ: минималистично, деловой стиль, без изображений."""
 
 
 class GammaClient:
@@ -64,24 +53,17 @@ class GammaClient:
         folder_id: Optional[str] = None,
     ) -> str:
         """
-        Создаёт презентацию в Gamma с системным промптом.
-        textMode=freeform — передаём промпт + markdown как инструкцию для AI.
+        Создаёт презентацию в Gamma.
+        textMode=preserve — текст сохраняется точно.
+        additionalInstructions — системный промпт с правилами.
         """
-        # Формируем полный текст: системный промпт + markdown
-        full_input = GAMMA_SYSTEM_PROMPT + "\n\n" + markdown_text
-
         payload = {
-            "inputText": full_input,
-            "textMode": "freeform",
+            "inputText": markdown_text,
+            "textMode": "preserve",
+            "additionalInstructions": GAMMA_ADDITIONAL_INSTRUCTIONS,
             "format": "presentation",
             "numCards": num_cards,
             "cardSplit": "auto",
-            "textOptions": {
-                "amount": "detailed",
-                "tone": "professional",
-                "audience": "management team",
-                "language": language
-            },
             "imageOptions": {
                 "source": "noImages"
             },
@@ -112,7 +94,7 @@ class GammaClient:
             try:
                 error_data = resp.json()
                 error_msg = error_data.get('message', error_msg)
-            except:
+            except Exception:
                 pass
             raise RuntimeError(f"Gamma API error {resp.status_code}: {error_msg}")
 
@@ -166,7 +148,6 @@ class GammaClient:
         )
         if resp.status_code == 200:
             data = resp.json()
-            # API может вернуть список или объект с полем items/themes
             if isinstance(data, list):
                 return data
             if isinstance(data, dict):
@@ -193,5 +174,5 @@ class GammaClient:
         try:
             self.get_themes()
             return True
-        except:
+        except Exception:
             return False
