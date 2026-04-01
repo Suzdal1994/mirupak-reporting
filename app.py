@@ -209,8 +209,11 @@ def job_status(job_id):
     if not job:
         return jsonify({'error': 'Задача не найдена'}), 404
 
-    # Не возвращаем markdowns в статусе (слишком большие)
+    # Не возвращаем markdowns в статусе (слишком большие) — только счётчик
+    markdowns = job.get('markdowns', {})
     response = {k: v for k, v in job.items() if k != 'markdowns'}
+    response['markdown_count'] = len(markdowns)
+    response['markdown_files'] = list(markdowns.keys())
     return jsonify(response)
 
 
